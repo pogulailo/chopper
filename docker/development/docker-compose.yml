@@ -6,7 +6,7 @@ services:
       context: ../../
       dockerfile: ./docker/development/app/Dockerfile
     volumes:
-      - ../../app:/var/www/html
+      - ../../app:/home/app/web
 
   nginx:
     image: nginx:alpine
@@ -15,5 +15,5 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - ../../app:/var/www/html:ro
+      - ../../app:/home/app/web:ro
       - ./nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf:ro
