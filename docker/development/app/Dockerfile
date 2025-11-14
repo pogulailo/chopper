@@ -1,5 +1,7 @@
 FROM php:8.4-fpm
 
+WORKDIR /home/app/web
+
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -16,7 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+COPY docker/development/app/conf.d/prusa-slicer /home/app/datadir
+
 ENV COMPOSER_ALLOW_SUPERUSER 1
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/bin --filename=composer --quiet
-
-WORKDIR /home/app/web
