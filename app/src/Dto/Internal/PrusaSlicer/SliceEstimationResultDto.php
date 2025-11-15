@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Dto;
+namespace App\Dto\Internal\PrusaSlicer;
 
 final readonly class SliceEstimationResultDto
 {

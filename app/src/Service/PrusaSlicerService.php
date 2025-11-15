@@ -2,24 +2,25 @@
 
 namespace App\Service;
 
-use App\Dto\SliceEstimationResultDto;
-use App\Dto\SliceRequestDto;
+use App\Dto\Internal\PrusaSlicer\SliceEstimationResultDto;
+use App\Dto\Internal\PrusaSlicer\SliceRequestDto;
+use App\Service\PrusaSlicerWrapper\GCodeMetadataParser;
+use App\Service\PrusaSlicerWrapper\PrusaSlicerWrapper;
+use App\Service\PrusaSlicerWrapper\PrusaSlicerWrapperCommandBuilder;
 use RuntimeException;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Component\Process\Exception\ProcessTimedOutException;
-use Symfony\Component\Process\Process;
 use Symfony\Component\Uid\Uuid;
 use Throwable;
 
-class PrusaSlicerService
+readonly class PrusaSlicerService
 {
-    private const DEFAULT_TIMEOUT = 900;
-
     public function __construct(
         #[Autowire('%kernel.project_dir%')]
-        private readonly string $projectDir,
-        private readonly string $prusaExecutable = 'prusa-slicer',
-        private readonly string $dataDir = '/home/app/datadir',
+        private string $projectDir,
+        private PrusaSlicerWrapperCommandBuilder $slicerWrapperCommandBuilder,
+        private PrusaSlicerWrapper $slicerWrapper,
+        private GCodeMetadataParser $gCodeMetadataParser,
+        private string $dataDir = '/home/app/datadir',
     ) {
     }
 
@@ -43,60 +44,34 @@ class PrusaSlicerService
             throw new RuntimeException('Printer, print and material profiles must be provided.');
         }
 
-        $commandLine = [
-            $this->prusaExecutable,
-            '--gcode',
-            sprintf('--datadir=%s', $this->dataDir),
-            sprintf('--printer-profile=%s', $printerProfile),
-            sprintf('--print-profile=%s', $printProfile),
-            sprintf('--material-profile=%s', $materialProfile),
-            '-o',
-            $outputPath,
-            $modelPath,
-        ];
+        $command = $this->slicerWrapperCommandBuilder
+            ->enableGCodeExport()
+            ->withDataDir($this->dataDir)
+            ->withPrinterProfile($printerProfile)
+            ->withPrintProfile($printProfile)
+            ->withMaterialProfile($materialProfile)
+            ->withOutput($outputPath)
+            ->addModel($modelPath);
 
-        $process = new Process($commandLine, $this->projectDir, null, null, self::DEFAULT_TIMEOUT);
-        $stdoutBuffer = '';
-        $stderrBuffer = '';
-
-        try {
-            $process->run(static function (string $type, string $buffer) use (&$stdoutBuffer, &$stderrBuffer): void {
-                if ($type === Process::OUT) {
-                    $stdoutBuffer .= $buffer;
-                }
-
-                if ($type === Process::ERR) {
-                    $stderrBuffer .= $buffer;
-                }
-            });
-        } catch (ProcessTimedOutException $exception) {
-            throw new RuntimeException(
-                sprintf('PrusaSlicer timed out after %d seconds', self::DEFAULT_TIMEOUT),
-                previous: $exception,
-            );
-        }
-
-        if (!$process->isSuccessful()) {
-            throw new RuntimeException(
-                sprintf(
-                    'PrusaSlicer failed with exit code %d. Stderr: %s',
-                    $process->getExitCode(),
-                    $stderrBuffer !== '' ? $stderrBuffer : '<empty>'
-                )
-            );
-        }
+        $this->slicerWrapper->run($command);
 
         if (!is_readable($outputPath)) {
             throw new RuntimeException(sprintf('Expected G-code output not found at "%s".', $outputPath));
         }
 
-        $gcodeContents = file_get_contents($outputPath);
-        if ($gcodeContents === false) {
+        $gCodeContents = file_get_contents($outputPath);
+        if ($gCodeContents === false) {
             throw new RuntimeException(sprintf('Unable to read G-code output at "%s".', $outputPath));
         }
 
-        $filamentWeight = $this->extractFloat($gcodeContents, '/; filament used \[g] = ([\d.]+)/i');
-        $printTimeRaw = $this->extractString($gcodeContents, '/; estimated printing time \(normal mode\) = ([^\n]+)/i');
+        $filamentWeight = $this->gCodeMetadataParser->extractFloat(
+            $gCodeContents,
+            '/; filament used \[g] = ([\d.]+)/i'
+        );
+        $printTimeRaw = $this->gCodeMetadataParser->extractString(
+            $gCodeContents,
+            '/; estimated printing time \(normal mode\) = ([^\n]+)/i'
+        );
         $printTimeSeconds = $this->convertPrusaTimeToSeconds($printTimeRaw);
 
         return new SliceEstimationResultDto($filamentWeight, $printTimeSeconds, $outputPath);
@@ -107,22 +82,6 @@ class PrusaSlicerService
         return str_starts_with($path, DIRECTORY_SEPARATOR)
             ? $path
             : $this->projectDir . DIRECTORY_SEPARATOR . ltrim($path, DIRECTORY_SEPARATOR);
-    }
-
-    private function extractFloat(string $haystack, string $pattern): float
-    {
-        $value = $this->extractString($haystack, $pattern);
-
-        return (float)$value;
-    }
-
-    private function extractString(string $haystack, string $pattern): string
-    {
-        if (!preg_match($pattern, $haystack, $matches) || !isset($matches[1])) {
-            throw new RuntimeException(sprintf('Unable to parse data using pattern "%s".', $pattern));
-        }
-
-        return trim($matches[1]);
     }
 
     private function convertPrusaTimeToSeconds(string $time): int

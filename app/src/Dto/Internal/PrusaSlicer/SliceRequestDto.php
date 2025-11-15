@@ -1,14 +1,14 @@
 <?php
 
-namespace App\Dto;
+namespace App\Dto\Internal\PrusaSlicer;
 
-final class SliceRequestDto
+final readonly class SliceRequestDto
 {
     public function __construct(
-        private readonly string $modelPath,
-        private readonly ?string $printerProfile = null,
-        private readonly ?string $printProfile = null,
-        private readonly ?string $materialProfile = null,
+        private string $modelPath,
+        private ?string $printerProfile = null,
+        private ?string $printProfile = null,
+        private ?string $materialProfile = null,
     ) {
     }
 

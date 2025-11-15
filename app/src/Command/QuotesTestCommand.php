@@ -2,7 +2,7 @@
 
 namespace App\Command;
 
-use App\Dto\SliceRequestDto;
+use App\Dto\Internal\PrusaSlicer\SliceRequestDto;
 use App\Service\PrusaSlicerService;
 use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
