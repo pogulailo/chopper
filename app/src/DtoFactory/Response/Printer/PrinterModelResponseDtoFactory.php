@@ -2,18 +2,18 @@
 
 namespace App\DtoFactory\Response\Printer;
 
-use App\Dto\Response\Printer\PrinterModelDto;
+use App\Dto\Response\Printer\PrinterModelResponseDto;
 
-readonly class PrinterModelDtoFactory
+readonly class PrinterModelResponseDtoFactory
 {
     public function __construct(
         private PrinterVariantDtoListFactory $printerVariantDtoListFactory,
     ) {
     }
 
-    public function create(array $data): PrinterModelDto
+    public function create(array $data): PrinterModelResponseDto
     {
-        return new PrinterModelDto(
+        return new PrinterModelResponseDto(
             ($data['id']),
             ($data['name']),
             ($data['technology']),

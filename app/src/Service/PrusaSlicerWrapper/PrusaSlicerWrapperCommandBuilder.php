@@ -84,6 +84,13 @@ class PrusaSlicerWrapperCommandBuilder
         return $this;
     }
 
+    public function queryPrintFilamentProfiles(): self
+    {
+        $this->arguments[] = '--query-print-filament-profiles';
+
+        return $this;
+    }
+
     public function addOption(string $option, string $value): self
     {
         $this->arguments[] = $option;

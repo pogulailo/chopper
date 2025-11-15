@@ -2,8 +2,7 @@
 
 namespace App\UseCase;
 
-use App\Dto\Response\Printer\PrinterModelDto;
-use App\DtoFactory\Response\Printer\PrinterModelDtoListFactory;
+use App\DtoFactory\Response\Printer\PrinterModelResponseDtoListFactory;
 use App\Service\PrusaSlicerService;
 use JsonException;
 use Psr\Cache\InvalidArgumentException;
@@ -12,7 +11,7 @@ final readonly class ListPrintersUseCase
 {
     public function __construct(
         private PrusaSlicerService $prusaSlicerService,
-        private PrinterModelDtoListFactory $printerModelDtoListFactory,
+        private PrinterModelResponseDtoListFactory $printerModelResponseDtoListFactory,
     ) {
     }
 
@@ -25,6 +24,6 @@ final readonly class ListPrintersUseCase
         $response = $this->prusaSlicerService->getPrinterModels();
         $printerModels = $response['printer_models'] ?? [];
 
-        return $this->printerModelDtoListFactory->create($printerModels);
+        return $this->printerModelResponseDtoListFactory->create($printerModels);
     }
 }

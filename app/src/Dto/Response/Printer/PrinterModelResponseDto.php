@@ -2,7 +2,7 @@
 
 namespace App\Dto\Response\Printer;
 
-final readonly class PrinterModelDto
+final readonly class PrinterModelResponseDto
 {
     public function __construct(
         private string $id,

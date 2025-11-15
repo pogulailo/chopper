@@ -12,6 +12,7 @@ use Psr\Cache\CacheItemPoolInterface;
 use Psr\Cache\InvalidArgumentException;
 use RuntimeException;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\String\Slugger\SluggerInterface;
 use Symfony\Component\Uid\Uuid;
 use Throwable;
 
@@ -25,6 +26,7 @@ readonly class PrusaSlicerService
         private GCodeMetadataParser $gCodeMetadataParser,
         #[Autowire(service: 'cache.app')]
         private CacheItemPoolInterface $cachePool,
+        private SluggerInterface $slugger,
         private string $dataDir = '/home/app/datadir',
     ) {
     }
@@ -122,6 +124,60 @@ readonly class PrusaSlicerService
 
         if (!json_validate($jsonContents)) {
             throw new RuntimeException('Unable to decode printer model response from PrusaSlicer.');
+        }
+
+        $decoded = json_decode($jsonContents, true, flags: JSON_THROW_ON_ERROR);
+
+        $cacheItem->set($decoded);
+        $this->cachePool->save($cacheItem);
+
+        return $decoded;
+    }
+
+    /**
+     * @throws JsonException
+     * @throws InvalidArgumentException
+     */
+    public function getPrintFilamentProfiles(string $printerProfile): array
+    {
+        $slug = $this->slugger->slug($printerProfile)->lower()->toString();
+        $cacheKey = sprintf('%s.%s', 'prusa_slicer.print_filament_profiles', $slug);
+
+        $cacheItem = $this->cachePool->getItem($cacheKey);
+
+        if ($cacheItem->isHit()) {
+            $cachedValue = $cacheItem->get();
+
+            return is_array($cachedValue) ? $cachedValue : [];
+        }
+
+        $outputPath = $this->generateOutputPath('json');
+
+        $command = $this->slicerWrapperCommandBuilder
+            ->reset()
+            ->withDataDir($this->dataDir)
+            ->withPrinterProfile($printerProfile)
+            ->queryPrintFilamentProfiles()
+            ->withOutput($outputPath);
+
+        try {
+            $this->slicerWrapper->run($command);
+        } catch (RuntimeException) {
+        }
+
+        if (!is_readable($outputPath)) {
+            throw new RuntimeException(
+                sprintf('Expected print filament profiles output not found at "%s".', $outputPath)
+            );
+        }
+
+        $jsonContents = file_get_contents($outputPath);
+        if ($jsonContents === false) {
+            throw new RuntimeException(sprintf('Unable to read print filament profiles output at "%s".', $outputPath));
+        }
+
+        if (!json_validate($jsonContents)) {
+            throw new RuntimeException('Unable to decode print filament profiles response from PrusaSlicer.');
         }
 
         $decoded = json_decode($jsonContents, true, flags: JSON_THROW_ON_ERROR);
