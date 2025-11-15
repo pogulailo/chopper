@@ -6,6 +6,13 @@ class PrusaSlicerWrapperCommandBuilder
 {
     private array $arguments = [];
 
+    public function reset(): self
+    {
+        $this->arguments = [];
+
+        return $this;
+    }
+
     public function enableGCodeExport(): self
     {
         $this->arguments[] = '--gcode';
@@ -41,6 +48,13 @@ class PrusaSlicerWrapperCommandBuilder
         return $this;
     }
 
+    public function withPrinterTechnology(string $technology): self
+    {
+        $this->arguments[] = sprintf('--printer-technology=%s', $technology);
+
+        return $this;
+    }
+
     public function withOutput(string $path): self
     {
         $this->arguments[] = '-o';
@@ -59,6 +73,13 @@ class PrusaSlicerWrapperCommandBuilder
     public function addArgument(string $argument): self
     {
         $this->arguments[] = $argument;
+
+        return $this;
+    }
+
+    public function queryPrinterModels(): self
+    {
+        $this->arguments[] = '--query-printer-models';
 
         return $this;
     }

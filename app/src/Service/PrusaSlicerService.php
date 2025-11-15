@@ -7,6 +7,9 @@ use App\Dto\Internal\PrusaSlicer\SliceRequestDto;
 use App\Service\PrusaSlicerWrapper\GCodeMetadataParser;
 use App\Service\PrusaSlicerWrapper\PrusaSlicerWrapper;
 use App\Service\PrusaSlicerWrapper\PrusaSlicerWrapperCommandBuilder;
+use JsonException;
+use Psr\Cache\CacheItemPoolInterface;
+use Psr\Cache\InvalidArgumentException;
 use RuntimeException;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Uid\Uuid;
@@ -20,6 +23,8 @@ readonly class PrusaSlicerService
         private PrusaSlicerWrapperCommandBuilder $slicerWrapperCommandBuilder,
         private PrusaSlicerWrapper $slicerWrapper,
         private GCodeMetadataParser $gCodeMetadataParser,
+        #[Autowire(service: 'cache.app')]
+        private CacheItemPoolInterface $cachePool,
         private string $dataDir = '/home/app/datadir',
     ) {
     }
@@ -34,7 +39,7 @@ readonly class PrusaSlicerService
             throw new RuntimeException(sprintf('Model path "%s" is not readable.', $modelPath));
         }
 
-        $outputPath = $this->generateOutputPath();
+        $outputPath = $this->generateOutputPath('gcode');
 
         $printerProfile = $requestDto->getPrinterProfile();
         $printProfile = $requestDto->getPrintProfile();
@@ -45,6 +50,7 @@ readonly class PrusaSlicerService
         }
 
         $command = $this->slicerWrapperCommandBuilder
+            ->reset()
             ->enableGCodeExport()
             ->withDataDir($this->dataDir)
             ->withPrinterProfile($printerProfile)
@@ -77,6 +83,55 @@ readonly class PrusaSlicerService
         return new SliceEstimationResultDto($filamentWeight, $printTimeSeconds);
     }
 
+    /**
+     * @throws JsonException
+     * @throws InvalidArgumentException
+     */
+    public function getPrinterModels(): array
+    {
+        $cacheItem = $this->cachePool->getItem('prusa_slicer.printer_models');
+
+        if ($cacheItem->isHit()) {
+            $cachedValue = $cacheItem->get();
+
+            return is_array($cachedValue) ? $cachedValue : [];
+        }
+
+        $outputPath = $this->generateOutputPath('json');
+
+        $command = $this->slicerWrapperCommandBuilder
+            ->reset()
+            ->withDataDir($this->dataDir)
+            ->withPrinterTechnology('FFF')
+            ->queryPrinterModels()
+            ->withOutput($outputPath);
+
+        try {
+            $this->slicerWrapper->run($command);
+        } catch (RuntimeException) {
+        }
+
+        if (!is_readable($outputPath)) {
+            throw new RuntimeException(sprintf('Expected printer model output not found at "%s".', $outputPath));
+        }
+
+        $jsonContents = file_get_contents($outputPath);
+        if ($jsonContents === false) {
+            throw new RuntimeException(sprintf('Unable to read printer model output at "%s".', $outputPath));
+        }
+
+        if (!json_validate($jsonContents)) {
+            throw new RuntimeException('Unable to decode printer model response from PrusaSlicer.');
+        }
+
+        $decoded = json_decode($jsonContents, true, flags: JSON_THROW_ON_ERROR);
+
+        $cacheItem->set($decoded);
+        $this->cachePool->save($cacheItem);
+
+        return $decoded;
+    }
+
     private function resolvePath(string $path): string
     {
         return str_starts_with($path, DIRECTORY_SEPARATOR)
@@ -107,7 +162,7 @@ readonly class PrusaSlicerService
         return $seconds;
     }
 
-    private function generateOutputPath(): string
+    private function generateOutputPath(string $extension): string
     {
         try {
             $uuid = Uuid::v4()->toRfc4122();
@@ -118,6 +173,8 @@ readonly class PrusaSlicerService
             );
         }
 
-        return sys_get_temp_dir() . DIRECTORY_SEPARATOR . $uuid . '.gcode';
+        $extension = ltrim($extension, '.');
+
+        return sys_get_temp_dir() . DIRECTORY_SEPARATOR . $uuid . '.' . $extension;
     }
 }
