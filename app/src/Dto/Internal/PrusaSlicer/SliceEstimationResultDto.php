@@ -7,7 +7,6 @@ final readonly class SliceEstimationResultDto
     public function __construct(
         private float $filamentWeightInGrams,
         private int $printTimeInSeconds,
-        private string $outputPath,
     ) {
     }
 
@@ -19,10 +18,5 @@ final readonly class SliceEstimationResultDto
     public function getPrintTimeInSeconds(): int
     {
         return $this->printTimeInSeconds;
-    }
-
-    public function getOutputPath(): string
-    {
-        return $this->outputPath;
     }
 }

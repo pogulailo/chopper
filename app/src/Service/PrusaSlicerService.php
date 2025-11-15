@@ -74,7 +74,7 @@ readonly class PrusaSlicerService
         );
         $printTimeSeconds = $this->convertPrusaTimeToSeconds($printTimeRaw);
 
-        return new SliceEstimationResultDto($filamentWeight, $printTimeSeconds, $outputPath);
+        return new SliceEstimationResultDto($filamentWeight, $printTimeSeconds);
     }
 
     private function resolvePath(string $path): string
