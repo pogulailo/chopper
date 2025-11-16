@@ -18,7 +18,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-COPY docker/development/app/conf.d/prusa-slicer /home/app/datadir
+COPY docker/development/app/conf.d/datadir /home/app/datadir
+COPY docker/development/app/conf.d/php-upload.ini /usr/local/etc/php/conf.d/uploads.ini
 
 ENV COMPOSER_ALLOW_SUPERUSER 1
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/bin --filename=composer --quiet
