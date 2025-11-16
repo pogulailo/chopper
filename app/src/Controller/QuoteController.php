@@ -2,8 +2,8 @@
 
 namespace App\Controller;
 
-use App\Dto\Request\QuoteRequestDto;
-use App\UseCase\CalculateQuoteUseCase;
+use App\Dto\Request\Quote\QuoteRequestDto;
+use App\UseCase\Quote\CalculateQuoteUseCase;
 use InvalidArgumentException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Filesystem\Filesystem;

@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Dto\Response\Printer;
+namespace App\Dto\Response\PrinterProfile;
 
-final readonly class PrinterBedDto
+readonly class BedDto
 {
     public function __construct(
         private string $type,

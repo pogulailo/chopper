@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Dto\Request;
+namespace App\Dto\Request\Quote;
 
 use Symfony\Component\Validator\Constraints as Assert;
 

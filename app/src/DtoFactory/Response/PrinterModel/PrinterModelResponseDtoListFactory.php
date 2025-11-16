@@ -1,13 +1,13 @@
 <?php
 
-namespace App\DtoFactory\Response\Printer;
+namespace App\DtoFactory\Response\PrinterModel;
 
-use App\Dto\Response\Printer\PrinterModelResponseDto;
+use App\Dto\Response\PrinterModel\PrinterModelResponseDto;
 
 readonly class PrinterModelResponseDtoListFactory
 {
     public function __construct(
-        private PrinterModelResponseDtoFactory $printerModelResponseDtoFactory
+        private PrinterModelResponseDtoFactory $printerProfileResponseDtoFactory
     ) {
     }
 
@@ -15,7 +15,7 @@ readonly class PrinterModelResponseDtoListFactory
     {
         return array_map(
             function (array $printerModel): PrinterModelResponseDto {
-                return $this->printerModelResponseDtoFactory->create($printerModel);
+                return $this->printerProfileResponseDtoFactory->create($printerModel);
             },
             $printerModels
         );

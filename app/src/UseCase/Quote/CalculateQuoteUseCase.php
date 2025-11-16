@@ -1,10 +1,10 @@
 <?php
 
-namespace App\UseCase;
+namespace App\UseCase\Quote;
 
 use App\Dto\Internal\PrusaSlicer\SliceRequestDto;
-use App\Dto\Request\QuoteRequestDto;
-use App\Dto\Response\QuoteResponseDto;
+use App\Dto\Request\Quote\QuoteRequestDto;
+use App\Dto\Response\Quote\QuoteResponseDto;
 use App\Service\PrusaSlicerService;
 
 final readonly class CalculateQuoteUseCase

@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Dto\Response\Printer;
+namespace App\Dto\Response\PrinterProfile;
 
-final readonly class PrinterProfileDto
+readonly class PrinterProfileResponseDto
 {
     public function __construct(
         private string $name,
         private int $extrudersCount,
-        private PrinterBedDto $bed,
+        private BedDto $bed,
     ) {
     }
 
@@ -21,7 +21,7 @@ final readonly class PrinterProfileDto
         return $this->extrudersCount;
     }
 
-    public function getBed(): PrinterBedDto
+    public function getBed(): BedDto
     {
         return $this->bed;
     }
